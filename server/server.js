@@ -1,4 +1,3 @@
-// app.js  or  server.js
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -10,12 +9,10 @@ const PORT = process.env.PORT || 5000;
 
 app.use(express.json());
 
-// Connect DB before starting server
 (async () => {
   try {
     await connectDB();
 
-    // ── Your routes here ──
     app.get('/', (req, res) => {
       res.json({ message: 'API is live • MongoDB connected' });
     });
