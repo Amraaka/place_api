@@ -1,0 +1,14 @@
+[
+  {
+    "id": "user_alice_1",
+    "name": "Alice Johnson",
+    "email": "alice@placeshare.dev",
+    "password": "password123"
+  },
+  {
+    "id": "user_bat_1",
+    "name": "Bat-Erdene",
+    "email": "bat@placeshare.dev",
+    "password": "password123"
+  }
+]
