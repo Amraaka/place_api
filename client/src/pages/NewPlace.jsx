@@ -13,7 +13,7 @@ const isValidUrl = (url) => {
 };
 
 function NewPlace() {
-  const { isLoggedIn, userId, userName } = useAuth();
+  const { isLoggedIn, userId } = useAuth();
   const { addPlace } = usePlaces();
   const navigate = useNavigate();
 
@@ -22,14 +22,19 @@ function NewPlace() {
     description: '',
     imageUrl: '',
     address: '',
+    lng: '',
+    lat: '',
   });
   const [errors, setErrors] = useState({});
+  const [globalError, setGlobalError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isLoggedIn) return <Navigate to="/authenticate" replace />;
 
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
+    setGlobalError('');
   };
 
   const validate = () => {
@@ -42,10 +47,16 @@ function NewPlace() {
       errs.imageUrl = 'Зөв холбоос оруулна уу (жишээ: https://example.com/photo.jpg).';
     }
     if (!formData.address.trim())     errs.address = 'Хаяг оруулах шаардлагатай.';
+    if (formData.lng === '' || Number.isNaN(Number(formData.lng))) {
+      errs.lng = 'Уртраг зөв тоо байх ёстой.';
+    }
+    if (formData.lat === '' || Number.isNaN(Number(formData.lat))) {
+      errs.lat = 'Өргөрөг зөв тоо байх ёстой.';
+    }
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -53,9 +64,28 @@ function NewPlace() {
       return;
     }
 
-    addPlace({ ...formData, creator: userId, creatorName: userName });
+    setIsSubmitting(true);
+    setGlobalError('');
 
-    navigate(`/${userId}/places`);
+    try {
+      await addPlace({
+        title: formData.title,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        address: formData.address,
+        creator: userId,
+        location: {
+          lng: Number(formData.lng),
+          lat: Number(formData.lat),
+        },
+      });
+
+      navigate(`/${userId}/places`);
+    } catch (err) {
+      setGlobalError(err.message || 'Газар нэмэх үед алдаа гарлаа.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass =
@@ -73,6 +103,12 @@ function NewPlace() {
         className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-5"
         noValidate
       >
+        {globalError && (
+          <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {globalError}
+          </p>
+        )}
+
         <div className="flex flex-col gap-1">
           <label htmlFor="title" className="text-sm text-slate-700">Гарчиг</label>
           <input
@@ -132,6 +168,38 @@ function NewPlace() {
           )}
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="lng" className="text-sm text-slate-700">Longitude</label>
+            <input
+              id="lng" name="lng" type="number" step="any"
+              value={formData.lng} onChange={handleChange}
+              placeholder="106.9057"
+              className={`${inputClass} ${
+                errors.lng ? inputErrorClass : ''
+              }`}
+            />
+            {errors.lng && (
+              <span className="text-xs text-red-600">{errors.lng}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="lat" className="text-sm text-slate-700">Latitude</label>
+            <input
+              id="lat" name="lat" type="number" step="any"
+              value={formData.lat} onChange={handleChange}
+              placeholder="47.9185"
+              className={`${inputClass} ${
+                errors.lat ? inputErrorClass : ''
+              }`}
+            />
+            {errors.lat && (
+              <span className="text-xs text-red-600">{errors.lat}</span>
+            )}
+          </div>
+        </div>
+
         <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
@@ -142,9 +210,10 @@ function NewPlace() {
           </button>
           <button
             type="submit"
+            disabled={isSubmitting}
             className="rounded bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700"
           >
-            Газар нэмэх
+            {isSubmitting ? 'Түр хүлээнэ үү...' : 'Газар нэмэх'}
           </button>
         </div>
       </form>

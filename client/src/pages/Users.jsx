@@ -1,23 +1,38 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { usePlaces } from '../context/PlacesContext';
+import { apiRequest } from '../lib/api';
 
 function Users() {
-  const { places } = usePlaces();
-  console.log('Places:', places);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  const usersMap = {};
-  places.forEach((place) => {
-    if (!usersMap[place.creator]) {
-      usersMap[place.creator] = {
-        userId: place.creator,
-        userName: place.creatorName,
-        placeCount: 0,
-      };
-    }
-    usersMap[place.creator].placeCount++;
-  });
+  useEffect(() => {
+    let isMounted = true;
 
-  const users = Object.values(usersMap);
+    const fetchUsers = async () => {
+      try {
+        const data = await apiRequest('/api/users');
+        if (isMounted) {
+          setUsers(data.users || []);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Хэрэглэгчдийн мэдээлэл ачаалж чадсангүй.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchUsers();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8">
@@ -25,7 +40,14 @@ function Users() {
         Бүх хэрэглэгч
       </h1>
 
-      {users.length === 0 ? (
+      {loading && <p className="text-sm text-slate-600">Ачаалж байна...</p>}
+      {error && (
+        <p className="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && users.length === 0 ? (
         <p className="mt-8 text-sm text-slate-600">
           Одоогоор хэн ч газар нийтлээгүй байна.{' '}
           <Link to="/authenticate" className="underline">
@@ -37,24 +59,33 @@ function Users() {
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
           {users.map((user) => (
             <li
-              key={user.userId}
+              key={user.id}
               className="flex items-center gap-3 rounded border border-slate-200 bg-white p-4"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-sm font-semibold text-slate-700">
-                {user.userName.charAt(0).toUpperCase()}
-              </div>
+              {user.imageUrl ? (
+                <img
+                  src={user.imageUrl}
+                  alt={user.name}
+                  className="h-10 w-10 shrink-0 rounded-full border border-slate-300 object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src =
+                      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=80&q=60';
+                  }}
+                />
+              ) : (
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-sm font-semibold text-slate-700">
+                  {user.name?.charAt(0)?.toUpperCase() || '?'}
+                </div>
+              )}
 
               <div className="flex-1">
                 <h3 className="text-base font-medium text-slate-800">
-                  {user.userName}
+                  {user.name}
                 </h3>
-                <p className="text-sm text-slate-500">
-                  {user.placeCount} газар
-                </p>
               </div>
 
               <Link
-                to={`/${user.userId}/places`}
+                to={`/${user.id}/places`}
                 className="rounded bg-slate-800 px-3 py-1.5 text-sm text-white no-underline hover:bg-slate-700"
               >
                 Газруудыг харах

@@ -1,11 +1,40 @@
+import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { usePlaces } from '../context/PlacesContext';
 import { useAuth } from '../context/AuthContext';
 
 function UserPlaces() {
   const { uid } = useParams();
-  const { places } = usePlaces();
+  const { places, fetchPlacesByUser } = usePlaces();
   const { userId, isLoggedIn } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPlaces = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        await fetchPlacesByUser(uid);
+      } catch (err) {
+        if (isMounted) {
+          setError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPlaces();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [uid, fetchPlacesByUser]);
 
   const userPlaces = places.filter((p) => p.creator === uid);
   const ownerName = userPlaces[0]?.creatorName || 'Хэрэглэгч';
@@ -18,7 +47,14 @@ function UserPlaces() {
         {ownerName} хэрэглэгчийн газрууд
       </h1>
 
-      {userPlaces.length === 0 ? (
+      {loading && <p className="text-sm text-slate-600">Ачаалж байна...</p>}
+      {error && (
+        <p className="mb-4 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+          {error}
+        </p>
+      )}
+
+      {!loading && !error && userPlaces.length === 0 ? (
         <p className="mt-8 text-sm text-slate-600">
           Энэ хэрэглэгчийн газар олдсонгүй.
           {isOwner && (
@@ -29,7 +65,7 @@ function UserPlaces() {
             </>
           )}
         </p>
-      ) : (
+      ) : !loading && !error ? (
         <ul className="m-0 grid list-none grid-cols-1 gap-4 p-0 md:grid-cols-2">
           {userPlaces.map((place) => (
             <li key={place.id}>
@@ -54,7 +90,7 @@ function UserPlaces() {
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 }

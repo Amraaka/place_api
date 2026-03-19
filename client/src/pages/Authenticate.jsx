@@ -1,44 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import sampleUsers from '../../db/users.json';
+import { apiRequest } from '../lib/api';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
-const ensureUsersSeeded = () => {
-  const storedUsers = localStorage.getItem('users');
-
-  if (!storedUsers) {
-    localStorage.setItem('users', JSON.stringify(sampleUsers));
-    return;
-  }
-
+const isValidUrl = (url) => {
   try {
-    const parsed = JSON.parse(storedUsers);
-    if (!Array.isArray(parsed)) {
-      throw new Error('Invalid users payload');
-    }
-
-    const existingIds = new Set(parsed.map((user) => user.id));
-    const existingEmails = new Set(parsed.map((user) => user.email));
-    const missingSeedUsers = sampleUsers.filter(
-      (user) => !existingIds.has(user.id) && !existingEmails.has(user.email)
-    );
-
-    if (missingSeedUsers.length > 0) {
-      localStorage.setItem('users', JSON.stringify([...parsed, ...missingSeedUsers]));
-    }
+    new URL(url);
+    return true;
   } catch {
-    localStorage.setItem('users', JSON.stringify(sampleUsers));
-  }
-};
-
-const readUsers = () => {
-  try {
-    const parsed = JSON.parse(localStorage.getItem('users') || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
+    return false;
   }
 };
 
@@ -47,13 +18,15 @@ function Authenticate() {
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    imageUrl: '',
+  });
   const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
-
-  useEffect(() => {
-    ensureUsersSeeded();
-  }, []);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (isLoggedIn) return <Navigate to="/" replace />;
 
@@ -61,7 +34,7 @@ function Authenticate() {
     setIsLogin(loginMode);
     setErrors({});
     setGlobalError('');
-    setFormData({ name: '', email: '', password: '' });
+    setFormData({ name: '', email: '', password: '', imageUrl: '' });
   };
 
   const handleChange = (e) => {
@@ -81,10 +54,15 @@ function Authenticate() {
     if (formData.password.length < 6) {
       errs.password = 'Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.';
     }
+    if (!isLogin && !formData.imageUrl.trim()) {
+      errs.imageUrl = 'Профайл зургийн URL шаардлагатай.';
+    } else if (!isLogin && !isValidUrl(formData.imageUrl)) {
+      errs.imageUrl = 'Зөв URL оруулна уу (жишээ: https://example.com/avatar.jpg).';
+    }
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const validationErrors = validate();
@@ -93,53 +71,46 @@ function Authenticate() {
       return;
     }
 
-    const users = readUsers();
+    setIsSubmitting(true);
+    setGlobalError('');
 
-    if (isLogin) {
-      const existingUser = users.find(
-        (u) => u.email === formData.email && u.password === formData.password
-      );
-      if (!existingUser) {
-        setGlobalError('Имэйл эсвэл нууц үг буруу байна. Дахин оролдоно уу.');
-        return;
-      }
-      login(existingUser.id, existingUser.name);
-    } else {
-      if (users.find((u) => u.email === formData.email)) {
-        setGlobalError(
-          'Энэ имэйлээр бүртгэл аль хэдийн байна. Нэвтэрнэ үү.'
-        );
-        return;
-      }
-      const newUser = {
-        id: `user_${Date.now()}_${Math.random().toString(36).slice(2)}`,
-        name: formData.name.trim(),
-        email: formData.email,
-        password: formData.password,
-      };
-      localStorage.setItem('users', JSON.stringify([...users, newUser]));
-      login(newUser.id, newUser.name);
+    try {
+      const endpoint = isLogin ? '/api/users/login' : '/api/users/signup';
+      const payload = isLogin
+        ? {
+            gmail: formData.email,
+            password: formData.password,
+          }
+        : {
+            name: formData.name.trim(),
+            gmail: formData.email,
+            password: formData.password,
+            imageUrl: formData.imageUrl.trim(),
+          };
+
+      const data = await apiRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      login(data.user.id, data.user.name, data.user.imageUrl || '');
+      navigate('/');
+    } catch (err) {
+      setGlobalError(err.message || 'Нэвтрэх үед алдаа гарлаа.');
+    } finally {
+      setIsSubmitting(false);
     }
-
-    navigate('/');
   };
 
   const inputClass =
     'w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-slate-500';
   const inputErrorClass = 'border-red-500';
-  const sampleHint = sampleUsers
-    .map((user) => `${user.email} / ${user.password}`)
-    .join(' | ');
-
   return (
     <div className="mx-auto w-full max-w-md px-4 py-8">
       <div className="rounded-lg border border-slate-200 bg-white p-5">
         <h1 className="mb-4 text-center text-xl font-semibold text-slate-800">
           {isLogin ? 'Нэвтрэх' : 'Бүртгүүлэх'}
         </h1>
-        <p className="mb-4 text-center text-xs text-slate-500">
-          Жишээ нэвтрэх мэдээлэл: {sampleHint}
-        </p>
 
         <div className="mb-4 grid grid-cols-2 gap-2">
           <button
@@ -193,6 +164,26 @@ function Authenticate() {
             </div>
           )}
 
+          {!isLogin && (
+            <div className="flex flex-col gap-1">
+              <label htmlFor="imageUrl" className="text-sm text-slate-700">Профайл зураг (URL)</label>
+              <input
+                id="imageUrl"
+                name="imageUrl"
+                type="url"
+                value={formData.imageUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/avatar.jpg"
+                className={`${inputClass} ${
+                  errors.imageUrl ? inputErrorClass : ''
+                }`}
+              />
+              {errors.imageUrl && (
+                <span className="text-xs text-red-600">{errors.imageUrl}</span>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm text-slate-700">Имэйл</label>
             <input
@@ -231,9 +222,14 @@ function Authenticate() {
 
           <button
             type="submit"
+            disabled={isSubmitting}
             className="mt-2 w-full rounded bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
           >
-            {isLogin ? 'Нэвтрэх' : 'Бүртгэл үүсгэх'}
+            {isSubmitting
+              ? 'Түр хүлээнэ үү...'
+              : isLogin
+                ? 'Нэвтрэх'
+                : 'Бүртгэл үүсгэх'}
           </button>
         </form>
       </div>

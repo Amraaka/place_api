@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlaces } from '../context/PlacesContext';
@@ -14,26 +14,92 @@ const isValidUrl = (url) => {
 
 function UpdatePlace() {
   const { pid } = useParams();
-  const { isLoggedIn } = useAuth();
-  const { places, updatePlace } = usePlaces();
+  const { isLoggedIn, userId } = useAuth();
+  const { fetchPlaceById, updatePlace } = usePlaces();
   const navigate = useNavigate();
 
-  const place = places.find((p) => p.id === pid);
-
   const [formData, setFormData] = useState({
-    title:       place?.title       || '',
-    description: place?.description || '',
-    imageUrl:    place?.imageUrl    || '',
-    address:     place?.address     || '',
+    title: '',
+    description: '',
+    imageUrl: '',
+    address: '',
+    lng: '',
+    lat: '',
   });
   const [errors, setErrors] = useState({});
+  const [place, setPlace] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [globalError, setGlobalError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadPlace = async () => {
+      setLoading(true);
+      setGlobalError('');
+
+      try {
+        const fetched = await fetchPlaceById(pid);
+        if (!isMounted) return;
+
+        setPlace(fetched);
+        setFormData({
+          title: fetched.title || '',
+          description: fetched.description || '',
+          imageUrl: fetched.imageUrl || '',
+          address: fetched.address || '',
+          lng: fetched.location?.lng?.toString?.() || '',
+          lat: fetched.location?.lat?.toString?.() || '',
+        });
+      } catch (err) {
+        if (isMounted) {
+          setGlobalError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadPlace();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [pid, fetchPlaceById]);
 
   if (!isLoggedIn) return <Navigate to="/authenticate" replace />;
 
   if (!place) {
+    if (loading) {
+      return (
+        <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+          <p className="mt-10 text-center text-base italic text-slate-500">Ачаалж байна...</p>
+        </div>
+      );
+    }
+
     return (
       <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        {globalError && (
+          <p className="mx-auto mb-4 max-w-md rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {globalError}
+          </p>
+        )}
         <p className="mt-10 text-center text-base italic text-slate-500">Газар олдсонгүй.</p>
+      </div>
+    );
+  }
+
+  const canEdit = place.creator === userId;
+  if (!canEdit) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        <p className="mt-10 text-center text-base italic text-slate-500">
+          Та зөвхөн өөрийнхөө газрыг засах боломжтой.
+        </p>
       </div>
     );
   }
@@ -41,6 +107,7 @@ function UpdatePlace() {
   const handleChange = (e) => {
     setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
     setErrors((prev) => ({ ...prev, [e.target.name]: '' }));
+    setGlobalError('');
   };
 
   const validate = () => {
@@ -53,10 +120,16 @@ function UpdatePlace() {
       errs.imageUrl = 'Зөв холбоос оруулна уу (жишээ: https://example.com/photo.jpg).';
     }
     if (!formData.address.trim())     errs.address = 'Хаяг оруулах шаардлагатай.';
+    if (formData.lng === '' || Number.isNaN(Number(formData.lng))) {
+      errs.lng = 'Уртраг зөв тоо байх ёстой.';
+    }
+    if (formData.lat === '' || Number.isNaN(Number(formData.lat))) {
+      errs.lat = 'Өргөрөг зөв тоо байх ёстой.';
+    }
     return errs;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
@@ -64,8 +137,26 @@ function UpdatePlace() {
       return;
     }
 
-    updatePlace(pid, formData);
-    navigate(`/${place.creator}/places`);
+    setIsSubmitting(true);
+    setGlobalError('');
+
+    try {
+      await updatePlace(pid, {
+        title: formData.title,
+        description: formData.description,
+        imageUrl: formData.imageUrl,
+        address: formData.address,
+        location: {
+          lng: Number(formData.lng),
+          lat: Number(formData.lat),
+        },
+      });
+      navigate(`/${place.creator}/places`);
+    } catch (err) {
+      setGlobalError(err.message || 'Засвар хадгалах үед алдаа гарлаа.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass =
@@ -83,6 +174,12 @@ function UpdatePlace() {
         className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-5"
         noValidate
       >
+        {globalError && (
+          <p className="rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">
+            {globalError}
+          </p>
+        )}
+
         <div className="flex flex-col gap-1">
           <label htmlFor="title" className="text-sm text-slate-700">Гарчиг</label>
           <input
@@ -138,6 +235,36 @@ function UpdatePlace() {
           )}
         </div>
 
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-1">
+            <label htmlFor="lng" className="text-sm text-slate-700">Longitude</label>
+            <input
+              id="lng" name="lng" type="number" step="any"
+              value={formData.lng} onChange={handleChange}
+              className={`${inputClass} ${
+                errors.lng ? inputErrorClass : ''
+              }`}
+            />
+            {errors.lng && (
+              <span className="text-xs text-red-600">{errors.lng}</span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label htmlFor="lat" className="text-sm text-slate-700">Latitude</label>
+            <input
+              id="lat" name="lat" type="number" step="any"
+              value={formData.lat} onChange={handleChange}
+              className={`${inputClass} ${
+                errors.lat ? inputErrorClass : ''
+              }`}
+            />
+            {errors.lat && (
+              <span className="text-xs text-red-600">{errors.lat}</span>
+            )}
+          </div>
+        </div>
+
         <div className="mt-2 flex justify-end gap-2">
           <button
             type="button"
@@ -148,9 +275,10 @@ function UpdatePlace() {
           </button>
           <button
             type="submit"
+            disabled={isSubmitting}
             className="rounded bg-slate-800 px-3 py-2 text-sm text-white hover:bg-slate-700"
           >
-            Хадгалах
+            {isSubmitting ? 'Түр хүлээнэ үү...' : 'Хадгалах'}
           </button>
         </div>
       </form>
