@@ -1,1 +1,3 @@
 server/node_modules/@mongodb-js/saslprep/dist/memory-code-points.d.ts.map
+client/node_modules/
+server/.env/
