@@ -53,7 +53,6 @@ function Users() {
           <Link to="/authenticate" className="underline">
             Бүртгүүлэх
           </Link>{' '}
-          хийгээд анхны нь болоорой!
         </p>
       ) : (
         <ul className="m-0 flex list-none flex-col gap-3 p-0">
@@ -67,10 +66,6 @@ function Users() {
                   src={user.imageUrl}
                   alt={user.name}
                   className="h-10 w-10 shrink-0 rounded-full border border-slate-300 object-cover"
-                  onError={(e) => {
-                    e.currentTarget.src =
-                      'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=80&q=60';
-                  }}
                 />
               ) : (
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-slate-100 text-sm font-semibold text-slate-700">

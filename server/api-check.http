@@ -1,0 +1,72 @@
+@baseUrl = http://localhost:5050
+@contentType = application/json
+@password = secret123
+@gmail = restclient+{{$timestamp}}@example.com
+
+### Health check
+GET {{baseUrl}}/
+
+### Sign up user
+# @name signup
+POST {{baseUrl}}/api/users/signup
+Content-Type: {{contentType}}
+
+{
+  "name": "REST Client User",
+  "gmail": "{{gmail}}",
+  "password": "{{password}}",
+  "imageUrl": "https://images.unsplash.com/photo-1544723795-3fb6469f5b39"
+}
+
+### Login user
+# @name login
+POST {{baseUrl}}/api/users/login
+Content-Type: {{contentType}}
+
+{
+  "gmail": "{{gmail}}",
+  "password": "{{password}}"
+}
+
+### List users
+GET {{baseUrl}}/api/users
+
+### Create place
+# @name createPlace
+POST {{baseUrl}}/api/places
+Content-Type: {{contentType}}
+
+{
+  "title": "REST Client Place",
+  "description": "Created from api-check.http",
+  "address": "Downtown, Sample City",
+  "imageUrl": "https://images.unsplash.com/photo-1501785888041-af3ef285b470",
+  "creator": "{{signup.response.body.user.id}}",
+  "location": {
+    "lng": -122.4194,
+    "lat": 37.7749
+  }
+}
+
+### Get place by id
+GET {{baseUrl}}/api/places/69bc1459d1182f0523177223
+
+### Get places by user id
+GET {{baseUrl}}/api/places/user/{{signup.response.body.user.id}}
+
+### Update place
+PATCH {{baseUrl}}/api/places/{{createPlace.response.body.place.id}}
+Content-Type: {{contentType}}
+
+{
+  "title": "REST Client Place Updated",
+  "description": "Updated from api-check.http",
+  "address": "Uptown, Sample City",
+  "location": {
+    "lng": -122.431297,
+    "lat": 37.773972
+  }
+}
+
+### Delete place
+DELETE {{baseUrl}}/api/places/{{createPlace.response.body.place.id}}

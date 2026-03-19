@@ -21,10 +21,8 @@ async function connectDB() {
 
   if (!cached.promise) {
     const opts = {
-      bufferCommands: false,               // ← disables command buffering during connection
-      // serverSelectionTimeoutMS: 5000,   // optional – fail fast if server not reachable
-      // maxPoolSize: 20,                  // adjust based on your traffic (default is often fine)
-      // retryWrites: true,                // usually already in Atlas URI
+      bufferCommands: false,              
+      serverSelectionTimeoutMS: 5000,   
     };
 
     cached.promise = mongoose
