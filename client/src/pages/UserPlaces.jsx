@@ -11,29 +11,19 @@ function UserPlaces() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-
     const loadPlaces = async () => {
       setLoading(true);
       setError('');
       try {
         await fetchPlacesByUser(uid);
       } catch (err) {
-        if (isMounted) {
-          setError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
-        }
+        setError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     loadPlaces();
-
-    return () => {
-      isMounted = false;
-    };
   }, [uid, fetchPlacesByUser]);
 
   const userPlaces = places.filter((p) => p.creator === uid);

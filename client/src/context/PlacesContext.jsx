@@ -13,8 +13,9 @@ export function PlacesProvider({ children }) {
 
   const fetchPlacesByUser = useCallback(async (uid) => {
     const data = await apiRequest(`/api/places/user/${uid}`);
-    setPlaces(data.places || []);
-    return data.places || [];
+    const nextPlaces = data.places ?? [];
+    setPlaces(nextPlaces);
+    return nextPlaces;
   }, []);
 
   const fetchPlaceById = useCallback(async (pid) => {

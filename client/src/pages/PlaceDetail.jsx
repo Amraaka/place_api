@@ -15,33 +15,21 @@ function PlaceDetail() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-
     const loadPlace = async () => {
       setLoading(true);
       setError("");
 
       try {
         const fetched = await fetchPlaceById(pid);
-        if (isMounted) {
-          setPlace(fetched);
-        }
+        setPlace(fetched);
       } catch (err) {
-        if (isMounted) {
-          setError(err.message || "Газрын мэдээлэл ачаалж чадсангүй.");
-        }
+        setError(err.message || "Газрын мэдээлэл ачаалж чадсангүй.");
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     loadPlace();
-
-    return () => {
-      isMounted = false;
-    };
   }, [pid, fetchPlaceById]);
 
   const isOwner = place?.creator === userId;

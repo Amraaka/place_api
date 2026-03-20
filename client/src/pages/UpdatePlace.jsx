@@ -33,41 +33,29 @@ function UpdatePlace() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
-
     const loadPlace = async () => {
       setLoading(true);
       setGlobalError('');
 
       try {
         const fetched = await fetchPlaceById(pid);
-        if (!isMounted) return;
-
         setPlace(fetched);
         setFormData({
           title: fetched.title || '',
           description: fetched.description || '',
           imageUrl: fetched.imageUrl || '',
           address: fetched.address || '',
-          lng: fetched.location?.lng?.toString?.() || '',
-          lat: fetched.location?.lat?.toString?.() || '',
+          lng: String(fetched.location?.lng ?? ''),
+          lat: String(fetched.location?.lat ?? ''),
         });
       } catch (err) {
-        if (isMounted) {
-          setGlobalError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
-        }
+        setGlobalError(err.message || 'Газрын мэдээлэл ачаалж чадсангүй.');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     loadPlace();
-
-    return () => {
-      isMounted = false;
-    };
   }, [pid, fetchPlaceById]);
 
   if (!isLoggedIn) return <Navigate to="/authenticate" replace />;

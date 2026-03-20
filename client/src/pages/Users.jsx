@@ -8,30 +8,18 @@ function Users() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-
     const fetchUsers = async () => {
       try {
         const data = await apiRequest('/api/users');
-        if (isMounted) {
-          setUsers(data.users || []);
-        }
+        setUsers(data.users || []);
       } catch (err) {
-        if (isMounted) {
-          setError(err.message || 'Хэрэглэгчдийн мэдээлэл ачаалж чадсангүй.');
-        }
+        setError(err.message || 'Хэрэглэгчдийн мэдээлэл ачаалж чадсангүй.');
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
     };
 
     fetchUsers();
-
-    return () => {
-      isMounted = false;
-    };
   }, []);
 
   return (
