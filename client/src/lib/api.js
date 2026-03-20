@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
+// console.log('API Base URL:', API_BASE);
 
 const buildUrl = (path) => `${API_BASE}${path}`;
 
