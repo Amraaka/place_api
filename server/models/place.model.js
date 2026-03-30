@@ -32,6 +32,10 @@ const placeSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    people: {
+      type: Number,
+      default: 0,
+    },
     creator: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',

@@ -12,6 +12,7 @@ const toPublicPlace = (place) => ({
   location: place.location,
   imageUrl: place.imageUrl,
   creator: place.creator?._id?.toString?.() || place.creator?.toString?.() || '',
+  people: place.people || 0,
   creatorName: place.creator?.name || '',
 });
 
@@ -59,6 +60,7 @@ router.post('/', async (req, res, next) => {
       imageUrl,
       creator,
       creatorId,
+      people,
       location,
       lat,
       lng,
@@ -92,6 +94,7 @@ router.post('/', async (req, res, next) => {
       imageUrl: imageUrl.trim(),
       creator: resolvedCreator,
       location: { lng: resolvedLng, lat: resolvedLat },
+      people: people || 0,
     });
 
     const hydrated = await place.populate('creator', 'name');
@@ -109,7 +112,7 @@ router.patch('/:pid', async (req, res, next) => {
     }
 
     const updates = {};
-    const updatableFields = ['title', 'description', 'address', 'imageUrl'];
+    const updatableFields = ['title', 'description', 'address', 'imageUrl', 'people'];
     for (const field of updatableFields) {
       if (typeof req.body[field] === 'string') {
         updates[field] = req.body[field].trim();

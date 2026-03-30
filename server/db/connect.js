@@ -1,49 +1,33 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+
 dotenv.config({ path: new URL('../.env', import.meta.url) });
 
 const MONGODB_URI = process.env.MONGODB_URI;
+if (!MONGODB_URI) throw new Error('MONGODB_URI not found');
 
-if (!MONGODB_URI) {
-  throw new Error('Please define MONGODB_URI in your .env file');
-}
+const cached = (globalThis.mongoose ??= { conn: null, promise: null });
 
-let cached = global.mongoose;
-
-if (!cached) {
-  cached = global.mongoose = { conn: null, promise: null };
-}
+const options = {
+  bufferCommands: false,
+  serverSelectionTimeoutMS: 5000,
+};
 
 async function connectDB() {
-  if (cached.conn) {
-    return cached.conn;
-  }
+  if (cached.conn) return cached.conn;
 
-  if (!cached.promise) {
-    const opts = {
-      bufferCommands: false,              
-      serverSelectionTimeoutMS: 5000,   
-    };
+  cached.promise ??= mongoose
+    .connect(MONGODB_URI, options)
+    .then((m) => {
+      console.log('MongoDB connected');
+      return m;
+    })
+    .catch((err) => {
+      cached.promise = null;
+      throw err;
+    });
 
-    cached.promise = mongoose
-      .connect(MONGODB_URI, opts)
-      .then((mongoose) => {
-        console.log('MongoDB connected');
-        return mongoose;
-      })
-      .catch((err) => {
-        cached.promise = null;
-        throw err;
-      });
-  }
-
-  try {
-    cached.conn = await cached.promise;
-  } catch (e) {
-    cached.promise = null;
-    throw e;
-  }
-
+  cached.conn = await cached.promise;
   return cached.conn;
 }
 
