@@ -2,15 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlaces } from '../context/PlacesContext';
-
-const isValidUrl = (url) => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
+import { isValidUrl } from '../lib/utils';
 
 function UpdatePlace() {
   const { pid } = useParams();

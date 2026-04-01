@@ -2,14 +2,46 @@ import jwt from 'jsonwebtoken';
 
 export const TOKEN_COOKIE = 'access_token';
 
-const authError = (res, status, message, code, details = undefined) => {
-  const body = { message, code };
-  if (details !== undefined) body.details = details;
-  return res.status(status).json(body);
-};
+// ─── Token helpers ────────────────────────────────────────────────────────────
+
+export const buildToken = (user) =>
+  jwt.sign(
+    {
+      sub: user.id,
+      name: user.name,
+      gmail: user.gmail,
+      imageUrl: user.imageUrl || '',
+    },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '1d' },
+  );
+
+export const authCookieOptions = () => ({
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+  maxAge: 24 * 60 * 60 * 1000,
+});
+
+export const clearCookieOptions = () => ({
+  httpOnly: true,
+  sameSite: 'lax',
+  secure: process.env.NODE_ENV === 'production',
+});
+
+// ─── Internal helpers ─────────────────────────────────────────────────────────
+
+const authError = (res, status, message, code) =>
+  res.status(status).json({ message, code });
 
 const verifyToken = (token) => jwt.verify(token, process.env.JWT_SECRET);
 
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+/**
+ * Requires a valid JWT cookie. Attaches `req.authUser` on success.
+ * Returns 403 when token is absent or invalid — as required by the assignment spec.
+ */
 export const requireAuth = (req, res, next) => {
   const token = req.cookies?.[TOKEN_COOKIE];
 
@@ -31,11 +63,15 @@ export const requireAuth = (req, res, next) => {
       res,
       403,
       'Токен хүчингүй эсвэл хугацаа дууссан байна.',
-      'AUTH_INVALID'
+      'AUTH_INVALID',
     );
   }
 };
 
+/**
+ * Allows only unauthenticated users (guest-only routes: /login, /signup).
+ * 403 = authenticated but this route forbids logged-in users.
+ */
 export const requireGuest = (req, res, next) => {
   const token = req.cookies?.[TOKEN_COOKIE];
 
@@ -47,7 +83,7 @@ export const requireGuest = (req, res, next) => {
       res,
       403,
       'Энэ зам нь зөвхөн нэвтрээгүй хэрэглэгчид зориулагдсан.',
-      'GUEST_ONLY'
+      'GUEST_ONLY',
     );
   } catch {
     return next();

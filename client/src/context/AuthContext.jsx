@@ -16,6 +16,19 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
+  const [authState, setAuthState] = useState(() => {
+    const stored = localStorage.getItem('auth');
+    if (!stored) return EMPTY_AUTH_STATE;
+    try {
+      const parsed = JSON.parse(stored);
+      return { ...EMPTY_AUTH_STATE, ...parsed, userAvatarUrl: parsed?.userAvatarUrl || '' };
+    } catch {
+      return EMPTY_AUTH_STATE;
+    }
+  });
+
+  const [authChecked, setAuthChecked] = useState(false);
+
   const applyAuthUser = useCallback((user) => {
     setAuthState({
       isLoggedIn: true,
@@ -24,24 +37,6 @@ export function AuthProvider({ children }) {
       userAvatarUrl: user.imageUrl || '',
     });
   }, []);
-
-  const [authState, setAuthState] = useState(() => {
-    const stored = localStorage.getItem('auth');
-    if (!stored) return EMPTY_AUTH_STATE;
-
-    try {
-      const parsed = JSON.parse(stored);
-      return {
-        ...EMPTY_AUTH_STATE,
-        ...parsed,
-        userAvatarUrl: parsed?.userAvatarUrl || '',
-      };
-    } catch {
-      return EMPTY_AUTH_STATE;
-    }
-  });
-
-  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     localStorage.setItem('auth', JSON.stringify(authState));

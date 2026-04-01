@@ -2,19 +2,12 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
+import { isValidUrl } from '../lib/utils';
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-const isValidUrl = (url) => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
 
 function Authenticate() {
-  const { isLoggedIn, authChecked, login, syncMe } = useAuth();
+  const { isLoggedIn, authChecked, login } = useAuth();
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -102,11 +95,9 @@ function Authenticate() {
       });
 
       login(data.user.id, data.user.name, data.user.imageUrl || '');
-      await syncMe();
       navigate('/');
     } catch (err) {
       if (err?.status === 403 && err?.code === 'GUEST_ONLY') {
-        await syncMe();
         navigate('/');
         return;
       }

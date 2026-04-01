@@ -142,16 +142,18 @@ function PlaceDetail() {
             </p>
           </section>
 
-          <section>
-            <a
-              href={googleMapsUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="w-fit rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 no-underline hover:bg-slate-50"
-            >
-              Google Maps дээр харах
-            </a>
-          </section>
+          {hasCoordinates && (
+            <section>
+              <a
+                href={googleMapsUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-fit rounded border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-700 no-underline hover:bg-slate-50"
+              >
+                Google Maps дээр харах
+              </a>
+            </section>
+          )}
 
           {isOwner && (
             <div className="flex flex-wrap gap-2">

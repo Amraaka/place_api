@@ -2,15 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { usePlaces } from '../context/PlacesContext';
-
-const isValidUrl = (url) => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
+import { isValidUrl } from '../lib/utils';
 
 function NewPlace() {
   const { isLoggedIn, authChecked, userId } = useAuth();

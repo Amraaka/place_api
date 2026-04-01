@@ -17,6 +17,7 @@ const toPublicPlace = (place) => ({
   creatorName: place.creator?.name || '',
 });
 
+// GET /api/places/user/:uid — all places for a user
 router.get('/user/:uid', async (req, res, next) => {
   try {
     const { uid } = req.params;
@@ -34,6 +35,7 @@ router.get('/user/:uid', async (req, res, next) => {
   }
 });
 
+// GET /api/places/:pid — single place
 router.get('/:pid', async (req, res, next) => {
   try {
     const { pid } = req.params;
@@ -52,20 +54,11 @@ router.get('/:pid', async (req, res, next) => {
   }
 });
 
+// POST /api/places — create a place
 router.post('/', requireAuth, async (req, res, next) => {
   try {
-    const {
-      title,
-      description,
-      address,
-      imageUrl,
-      people,
-      location,
-      lat,
-      lng,
-      longitude,
-      latitude,
-    } = req.body;
+    const { title, description, address, imageUrl, people, location, lat, lng, longitude, latitude } =
+      req.body;
 
     if (!title?.trim() || !description?.trim() || !address?.trim() || !imageUrl?.trim()) {
       return res.status(400).json({
@@ -97,20 +90,12 @@ router.post('/', requireAuth, async (req, res, next) => {
   }
 });
 
+// PATCH /api/places/:pid — update a place (owner only)
 router.patch('/:pid', requireAuth, async (req, res, next) => {
   try {
     const { pid } = req.params;
     if (!mongoose.Types.ObjectId.isValid(pid)) {
       return res.status(400).json({ message: 'Invalid place id.' });
-    }
-
-    const existingPlace = await Place.findById(pid);
-    if (!existingPlace) {
-      return res.status(404).json({ message: 'Place not found.' });
-    }
-
-    if (existingPlace.creator.toString() !== req.authUser.id) {
-      return res.status(403).json({ message: 'This place does not belong to you.' });
     }
 
     const updates = {};
@@ -148,10 +133,20 @@ router.patch('/:pid', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'No valid fields provided for update.' });
     }
 
-    const place = await Place.findByIdAndUpdate(pid, updates, {
-      new: true,
-      runValidators: true,
-    }).populate('creator', 'name');
+    // Single atomic query: only matches if the place exists AND belongs to this user,
+    // eliminating the race condition that occurred with separate findById + findByIdAndUpdate calls.
+    const place = await Place.findOneAndUpdate(
+      { _id: pid, creator: req.authUser.id },
+      updates,
+      { new: true, runValidators: true },
+    ).populate('creator', 'name');
+
+    if (!place) {
+      const exists = await Place.exists({ _id: pid });
+      return res
+        .status(exists ? 403 : 404)
+        .json({ message: exists ? 'This place does not belong to you.' : 'Place not found.' });
+    }
 
     res.status(200).json({ place: toPublicPlace(place) });
   } catch (error) {
@@ -159,6 +154,7 @@ router.patch('/:pid', requireAuth, async (req, res, next) => {
   }
 });
 
+// DELETE /api/places/:pid — delete a place (owner only)
 router.delete('/:pid', requireAuth, async (req, res, next) => {
   try {
     const { pid } = req.params;
@@ -166,16 +162,16 @@ router.delete('/:pid', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'Invalid place id.' });
     }
 
-    const place = await Place.findById(pid);
-    if (!place) {
-      return res.status(404).json({ message: 'Place not found.' });
+    // Single atomic query: only deletes if the place exists AND belongs to this user.
+    const deleted = await Place.findOneAndDelete({ _id: pid, creator: req.authUser.id });
+
+    if (!deleted) {
+      const exists = await Place.exists({ _id: pid });
+      return res
+        .status(exists ? 403 : 404)
+        .json({ message: exists ? 'This place does not belong to you.' : 'Place not found.' });
     }
 
-    if (place.creator.toString() !== req.authUser.id) {
-      return res.status(403).json({ message: 'This place does not belong to you.' });
-    }
-
-    await Place.findByIdAndDelete(pid);
     res.status(200).json({ message: 'Place deleted successfully.' });
   } catch (error) {
     next(error);
