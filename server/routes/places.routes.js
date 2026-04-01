@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import Place from '../models/place.model.js';
+import { requireAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
 
@@ -51,15 +52,13 @@ router.get('/:pid', async (req, res, next) => {
   }
 });
 
-router.post('/', async (req, res, next) => {
+router.post('/', requireAuth, async (req, res, next) => {
   try {
     const {
       title,
       description,
       address,
       imageUrl,
-      creator,
-      creatorId,
       people,
       location,
       lat,
@@ -68,16 +67,10 @@ router.post('/', async (req, res, next) => {
       latitude,
     } = req.body;
 
-    const resolvedCreator = creator || creatorId;
-
-    if (!title?.trim() || !description?.trim() || !address?.trim() || !imageUrl?.trim() || !resolvedCreator) {
+    if (!title?.trim() || !description?.trim() || !address?.trim() || !imageUrl?.trim()) {
       return res.status(400).json({
-        message: 'title, description, address, imageUrl and creator are required.',
+        message: 'title, description, address and imageUrl are required.',
       });
-    }
-
-    if (!mongoose.Types.ObjectId.isValid(resolvedCreator)) {
-      return res.status(400).json({ message: 'Invalid creator id.' });
     }
 
     const resolvedLng = Number(location?.lng ?? lng ?? longitude);
@@ -92,9 +85,9 @@ router.post('/', async (req, res, next) => {
       description: description.trim(),
       address: address.trim(),
       imageUrl: imageUrl.trim(),
-      creator: resolvedCreator,
+      creator: req.authUser.id,
       location: { lng: resolvedLng, lat: resolvedLat },
-      people: people || 0,
+      people: Number.isFinite(Number(people)) ? Number(people) : 0,
     });
 
     const hydrated = await place.populate('creator', 'name');
@@ -104,28 +97,50 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-router.patch('/:pid', async (req, res, next) => {
+router.patch('/:pid', requireAuth, async (req, res, next) => {
   try {
     const { pid } = req.params;
     if (!mongoose.Types.ObjectId.isValid(pid)) {
       return res.status(400).json({ message: 'Invalid place id.' });
     }
 
+    const existingPlace = await Place.findById(pid);
+    if (!existingPlace) {
+      return res.status(404).json({ message: 'Place not found.' });
+    }
+
+    if (existingPlace.creator.toString() !== req.authUser.id) {
+      return res.status(403).json({ message: 'This place does not belong to you.' });
+    }
+
     const updates = {};
-    const updatableFields = ['title', 'description', 'address', 'imageUrl', 'people'];
+    const updatableFields = ['title', 'description', 'address', 'imageUrl'];
+
     for (const field of updatableFields) {
       if (typeof req.body[field] === 'string') {
         updates[field] = req.body[field].trim();
       }
     }
 
-    const hasLocation = req.body.location || req.body.lng || req.body.lat || req.body.longitude || req.body.latitude;
+    if (req.body.people !== undefined) {
+      const parsedPeople = Number(req.body.people);
+      if (!Number.isFinite(parsedPeople)) {
+        return res.status(400).json({ message: 'people must be a valid number.' });
+      }
+      updates.people = parsedPeople;
+    }
+
+    const hasLocation =
+      req.body.location || req.body.lng || req.body.lat || req.body.longitude || req.body.latitude;
+
     if (hasLocation) {
       const resolvedLng = Number(req.body.location?.lng ?? req.body.lng ?? req.body.longitude);
       const resolvedLat = Number(req.body.location?.lat ?? req.body.lat ?? req.body.latitude);
+
       if (!Number.isFinite(resolvedLng) || !Number.isFinite(resolvedLat)) {
         return res.status(400).json({ message: 'Valid location (lng, lat) is required.' });
       }
+
       updates.location = { lng: resolvedLng, lat: resolvedLat };
     }
 
@@ -138,28 +153,29 @@ router.patch('/:pid', async (req, res, next) => {
       runValidators: true,
     }).populate('creator', 'name');
 
-    if (!place) {
-      return res.status(404).json({ message: 'Place not found.' });
-    }
-
     res.status(200).json({ place: toPublicPlace(place) });
   } catch (error) {
     next(error);
   }
 });
 
-router.delete('/:pid', async (req, res, next) => {
+router.delete('/:pid', requireAuth, async (req, res, next) => {
   try {
     const { pid } = req.params;
     if (!mongoose.Types.ObjectId.isValid(pid)) {
       return res.status(400).json({ message: 'Invalid place id.' });
     }
 
-    const deleted = await Place.findByIdAndDelete(pid);
-    if (!deleted) {
+    const place = await Place.findById(pid);
+    if (!place) {
       return res.status(404).json({ message: 'Place not found.' });
     }
 
+    if (place.creator.toString() !== req.authUser.id) {
+      return res.status(403).json({ message: 'This place does not belong to you.' });
+    }
+
+    await Place.findByIdAndDelete(pid);
     res.status(200).json({ message: 'Place deleted successfully.' });
   } catch (error) {
     next(error);

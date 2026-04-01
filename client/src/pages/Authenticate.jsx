@@ -14,7 +14,7 @@ const isValidUrl = (url) => {
 };
 
 function Authenticate() {
-  const { isLoggedIn, login } = useAuth();
+  const { isLoggedIn, authChecked, login, syncMe } = useAuth();
   const navigate = useNavigate();
 
   const [isLogin, setIsLogin] = useState(true);
@@ -27,6 +27,14 @@ function Authenticate() {
   const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!authChecked) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-8">
+        <p className="text-center text-sm text-slate-600">Нэвтрэлтийн төлөв шалгаж байна...</p>
+      </div>
+    );
+  }
 
   if (isLoggedIn) return <Navigate to="/" replace />;
 
@@ -94,8 +102,14 @@ function Authenticate() {
       });
 
       login(data.user.id, data.user.name, data.user.imageUrl || '');
+      await syncMe();
       navigate('/');
     } catch (err) {
+      if (err?.status === 403 && err?.code === 'GUEST_ONLY') {
+        await syncMe();
+        navigate('/');
+        return;
+      }
       setGlobalError(err.message || 'Нэвтрэх үед алдаа гарлаа.');
     } finally {
       setIsSubmitting(false);

@@ -14,7 +14,7 @@ const isValidUrl = (url) => {
 
 function UpdatePlace() {
   const { pid } = useParams();
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, authChecked, userId } = useAuth();
   const { fetchPlaceById, updatePlace } = usePlaces();
   const navigate = useNavigate();
 
@@ -57,6 +57,14 @@ function UpdatePlace() {
 
     loadPlace();
   }, [pid, fetchPlaceById]);
+
+  if (!authChecked) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+        <p className="mt-10 text-center text-base italic text-slate-500">Нэвтрэлтийн төлөв шалгаж байна...</p>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) return <Navigate to="/authenticate" replace />;
 

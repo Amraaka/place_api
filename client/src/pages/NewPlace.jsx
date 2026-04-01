@@ -13,7 +13,7 @@ const isValidUrl = (url) => {
 };
 
 function NewPlace() {
-  const { isLoggedIn, userId } = useAuth();
+  const { isLoggedIn, authChecked, userId } = useAuth();
   const { addPlace } = usePlaces();
   const navigate = useNavigate();
 
@@ -28,6 +28,14 @@ function NewPlace() {
   const [errors, setErrors] = useState({});
   const [globalError, setGlobalError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!authChecked) {
+    return (
+      <div className="mx-auto w-full max-w-md px-4 py-8">
+        <p className="text-center text-sm text-slate-600">Нэвтрэлтийн төлөв шалгаж байна...</p>
+      </div>
+    );
+  }
 
   if (!isLoggedIn) return <Navigate to="/authenticate" replace />;
 
@@ -73,7 +81,6 @@ function NewPlace() {
         description: formData.description,
         imageUrl: formData.imageUrl,
         address: formData.address,
-        creator: userId,
         location: {
           lng: Number(formData.lng),
           lat: Number(formData.lat),
