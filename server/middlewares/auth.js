@@ -1,9 +1,6 @@
 const authError = (res, status, message, code) =>
   res.status(status).json({ message, code });
 
-/**
- * Shape stored in req.session.user (and mirrored on req.authUser).
- */
 export const setSessionUser = (req, user) => {
   req.session.user = {
     id: user.id,
@@ -13,9 +10,8 @@ export const setSessionUser = (req, user) => {
   };
 };
 
-/**
- * Requires a logged-in session. Attaches `req.authUser` on success.
- */
+// Session shalgah
+
 export const requireAuth = (req, res, next) => {
   const user = req.session?.user;
   if (!user?.id) {
@@ -30,9 +26,7 @@ export const requireAuth = (req, res, next) => {
   return next();
 };
 
-/**
- * Guest-only routes (signup / login). 403 if already logged in.
- */
+// Nevtersen hereglegch handah bolomjgui
 export const requireGuest = (req, res, next) => {
   if (req.session?.user?.id) {
     return authError(

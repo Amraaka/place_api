@@ -18,7 +18,7 @@ const toPublicUser = (user) => ({
   id: user._id.toString(),
   name: user.name,
   gmail: user.gmail,
-  imageUrl: user.imageUrl,
+  imageUrl: user.imageUrl
 });
 
 // GET /api/users — list all users
@@ -74,6 +74,7 @@ router.post('/signup', requireGuest, async (req, res, next) => {
 
     const publicUser = toPublicUser(user);
     setSessionUser(req, publicUser);
+    // req.session.debugStatic = 'static-val';
     res.status(201).json({ user: publicUser });
   } catch (error) {
     next(error);
@@ -104,6 +105,7 @@ router.post('/login', requireGuest, async (req, res, next) => {
 
     const publicUser = toPublicUser(user);
     setSessionUser(req, publicUser);
+    // req.session.debugStatic = 'static-val';
     res.status(200).json({ user: publicUser });
   } catch (error) {
     next(error);
@@ -112,7 +114,12 @@ router.post('/login', requireGuest, async (req, res, next) => {
 
 // GET /api/users/me — session-backed profile
 router.get('/me', requireAuth, (req, res) => {
-  res.status(200).json({ user: req.authUser });
+  // res.status(200).json({ user: req.authUser });
+  res.status(200).json({
+    user: req.authUser,
+    // sessionId: req.sessionId,
+    // debugStatic: req.session?.debugStatic ?? null
+  })
 });
 
 // POST /api/users/logout

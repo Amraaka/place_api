@@ -12,7 +12,7 @@ POST {{baseUrl}}/api/users/signup
 Content-Type: {{contentType}}
 
 {
-  "name": "REST Client User",
+  "name": "amar",
   "gmail": "{{gmail}}",
   "password": "{{password}}",
   "imageUrl": "https://images.unsplash.com/photo-1544723795-3fb6469f5b39"
@@ -30,6 +30,13 @@ Content-Type: {{contentType}}
 
 ### List users
 GET {{baseUrl}}/api/users
+
+### Session
+GET {{baseUrl}}/api/users/me
+
+### Logout 
+POST {{baseUrl}}/api/users/logout
+
 
 ### Create place
 # @name createPlace
@@ -50,7 +57,7 @@ Content-Type: {{contentType}}
 }
 
 ### Get place by id
-GET {{baseUrl}}/api/places/69bc1459d1182f0523177223
+GET {{baseUrl}}/api/places/69ce1c2d9d20cb3b1bbb45e4
 
 ### Get places by user id
 GET {{baseUrl}}/api/places/user/{{signup.response.body.user.id}}

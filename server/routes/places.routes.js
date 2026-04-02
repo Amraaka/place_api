@@ -133,8 +133,7 @@ router.patch('/:pid', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'No valid fields provided for update.' });
     }
 
-    // Single atomic query: only matches if the place exists AND belongs to this user,
-    // eliminating the race condition that occurred with separate findById + findByIdAndUpdate calls.
+
     const place = await Place.findOneAndUpdate(
       { _id: pid, creator: req.authUser.id },
       updates,
