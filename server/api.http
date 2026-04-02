@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:5050
 @contentType = application/json
-@password = secret123
-@gmail = restclient+{{$timestamp}}@example.com
+@password = 123qwe
+@gmail = amaraabokhbat@gmail.com
 
 ### Health check
 GET {{baseUrl}}/

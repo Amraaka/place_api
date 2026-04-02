@@ -5,16 +5,6 @@ import { requireAuth, requireGuest, setSessionUser } from '../middlewares/auth.j
 
 const router = express.Router();
 
-const regenerateSession = (req) =>
-  new Promise((resolve, reject) => {
-    req.session.regenerate((err) => (err ? reject(err) : resolve()));
-  });
-
-const destroySession = (req) =>
-  new Promise((resolve, reject) => {
-    req.session.destroy((err) => (err ? reject(err) : resolve()));
-  });
-
 const isValidUrl = (value) => {
   try {
     const parsed = new URL(value);
@@ -83,7 +73,6 @@ router.post('/signup', requireGuest, async (req, res, next) => {
     });
 
     const publicUser = toPublicUser(user);
-    await regenerateSession(req);
     setSessionUser(req, publicUser);
     res.status(201).json({ user: publicUser });
   } catch (error) {
@@ -114,7 +103,6 @@ router.post('/login', requireGuest, async (req, res, next) => {
     }
 
     const publicUser = toPublicUser(user);
-    await regenerateSession(req);
     setSessionUser(req, publicUser);
     res.status(200).json({ user: publicUser });
   } catch (error) {
@@ -128,13 +116,9 @@ router.get('/me', requireAuth, (req, res) => {
 });
 
 // POST /api/users/logout
-router.post('/logout', requireAuth, async (req, res, next) => {
-  try {
-    await destroySession(req);
-    res.status(200).json({ message: 'Logged out successfully.' });
-  } catch (error) {
-    next(error);
-  }
+router.post('/logout', requireAuth, (req, res) => {
+  req.session.user = null;
+  res.status(200).json({ message: 'Logged out successfully.' });
 });
 
 export default router;

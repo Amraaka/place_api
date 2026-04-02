@@ -3,7 +3,6 @@ dotenv.config({ path: new URL('./.env', import.meta.url) });
 
 import express from 'express';
 import cors from 'cors';
-import morgan from 'morgan';
 import session from 'express-session';
 import MongoStore from 'connect-mongo';
 
@@ -23,7 +22,6 @@ app.use(cors({
   credentials: true
 }));
 
-app.use(morgan('dev'));
 app.use(express.json());
 
 (async () => {

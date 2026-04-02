@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useState, useContext, useCallback, useMemo } from 'react';
+import { createContext, useState, useContext, useCallback } from 'react';
 import { apiRequest } from '../lib/api';
 
 export const PlacesContext = createContext();
@@ -41,26 +41,14 @@ export function PlacesProvider({ children }) {
   }, []);
 
   const deletePlace = useCallback(async (placeId) => {
-    await apiRequest(`/api/places/${placeId}`, {
-      method: 'DELETE',
-    });
+    await apiRequest(`/api/places/${placeId}`, { method: 'DELETE' });
     setPlaces((prev) => prev.filter((p) => p.id !== placeId));
   }, []);
 
-  const value = useMemo(
-    () => ({
-      places,
-      fetchPlacesByUser,
-      fetchPlaceById,
-      addPlace,
-      updatePlace,
-      deletePlace,
-    }),
-    [places, fetchPlacesByUser, fetchPlaceById, addPlace, updatePlace, deletePlace]
-  );
-
   return (
-    <PlacesContext.Provider value={value}>
+    <PlacesContext.Provider
+      value={{ places, fetchPlacesByUser, fetchPlaceById, addPlace, updatePlace, deletePlace }}
+    >
       {children}
     </PlacesContext.Provider>
   );
