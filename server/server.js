@@ -4,7 +4,8 @@ dotenv.config({ path: new URL('./.env', import.meta.url) });
 import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
-import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import MongoStore from 'connect-mongo';
 
 import connectDB from './db/connect.js';
 import usersRoutes from './routes/users.routes.js';
@@ -13,10 +14,9 @@ import placesRoutes from './routes/places.routes.js';
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET is required in environment variables.');
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET is required in environment variables.');
 }
-
 
 app.use(cors({
   origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
@@ -25,11 +25,25 @@ app.use(cors({
 
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(cookieParser());
 
 (async () => {
   try {
     await connectDB();
+
+    app.use(
+      session({
+        secret: process.env.SESSION_SECRET,
+        resave: false,
+        saveUninitialized: false,
+        store: MongoStore.create({ mongoUrl: process.env.MONGODB_URI }),
+        cookie: {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 24 * 60 * 60 * 1000,
+        },
+      }),
+    );
 
     app.get('/', (req, res) => {
       res.json({ message: 'API is live • MongoDB connected' });

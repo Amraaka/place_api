@@ -94,7 +94,7 @@ function Authenticate() {
         body: JSON.stringify(payload),
       });
 
-      login(data.user.id, data.user.name, data.user.imageUrl || '');
+      login(data.user);
       navigate('/');
     } catch (err) {
       if (err?.status === 403 && err?.code === 'GUEST_ONLY') {

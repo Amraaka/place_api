@@ -16,16 +16,7 @@ export function useAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [authState, setAuthState] = useState(() => {
-    const stored = localStorage.getItem('auth');
-    if (!stored) return EMPTY_AUTH_STATE;
-    try {
-      const parsed = JSON.parse(stored);
-      return { ...EMPTY_AUTH_STATE, ...parsed, userAvatarUrl: parsed?.userAvatarUrl || '' };
-    } catch {
-      return EMPTY_AUTH_STATE;
-    }
-  });
+  const [authState, setAuthState] = useState(EMPTY_AUTH_STATE);
 
   const [authChecked, setAuthChecked] = useState(false);
 
@@ -37,10 +28,6 @@ export function AuthProvider({ children }) {
       userAvatarUrl: user.imageUrl || '',
     });
   }, []);
-
-  useEffect(() => {
-    localStorage.setItem('auth', JSON.stringify(authState));
-  }, [authState]);
 
   const syncMe = useCallback(async () => {
     try {
@@ -59,8 +46,8 @@ export function AuthProvider({ children }) {
     syncMe();
   }, [syncMe]);
 
-  const login = (userId, userName, userAvatarUrl = '') => {
-    applyAuthUser({ id: userId, name: userName, imageUrl: userAvatarUrl });
+  const login = (user) => {
+    applyAuthUser(user);
     setAuthChecked(true);
   };
 

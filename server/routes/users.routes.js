@@ -1,16 +1,19 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/user.model.js';
-import {
-  requireAuth,
-  requireGuest,
-  TOKEN_COOKIE,
-  buildToken,
-  authCookieOptions,
-  clearCookieOptions,
-} from '../middlewares/auth.js';
+import { requireAuth, requireGuest, setSessionUser } from '../middlewares/auth.js';
 
 const router = express.Router();
+
+const regenerateSession = (req) =>
+  new Promise((resolve, reject) => {
+    req.session.regenerate((err) => (err ? reject(err) : resolve()));
+  });
+
+const destroySession = (req) =>
+  new Promise((resolve, reject) => {
+    req.session.destroy((err) => (err ? reject(err) : resolve()));
+  });
 
 const isValidUrl = (value) => {
   try {
@@ -80,8 +83,8 @@ router.post('/signup', requireGuest, async (req, res, next) => {
     });
 
     const publicUser = toPublicUser(user);
-    const token = buildToken(publicUser);
-    res.cookie(TOKEN_COOKIE, token, authCookieOptions());
+    await regenerateSession(req);
+    setSessionUser(req, publicUser);
     res.status(201).json({ user: publicUser });
   } catch (error) {
     next(error);
@@ -111,31 +114,27 @@ router.post('/login', requireGuest, async (req, res, next) => {
     }
 
     const publicUser = toPublicUser(user);
-    const token = buildToken(publicUser);
-    res.cookie(TOKEN_COOKIE, token, authCookieOptions());
+    await regenerateSession(req);
+    setSessionUser(req, publicUser);
     res.status(200).json({ user: publicUser });
   } catch (error) {
     next(error);
   }
 });
 
-// GET /api/users/me — returns the authenticated user's profile
-router.get('/me', requireAuth, async (req, res, next) => {
-  try {
-    const user = await User.findById(req.authUser.id, 'name gmail imageUrl');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found.' });
-    }
-    res.status(200).json({ user: toPublicUser(user) });
-  } catch (error) {
-    next(error);
-  }
+// GET /api/users/me — session-backed profile
+router.get('/me', requireAuth, (req, res) => {
+  res.status(200).json({ user: req.authUser });
 });
 
 // POST /api/users/logout
-router.post('/logout', requireAuth, (req, res) => {
-  res.clearCookie(TOKEN_COOKIE, clearCookieOptions());
-  res.status(200).json({ message: 'Logged out successfully.' });
+router.post('/logout', requireAuth, async (req, res, next) => {
+  try {
+    await destroySession(req);
+    res.status(200).json({ message: 'Logged out successfully.' });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
