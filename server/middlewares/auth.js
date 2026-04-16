@@ -11,7 +11,6 @@ export const setSessionUser = (req, user) => {
 };
 
 // Session shalgah
-
 export const requireAuth = (req, res, next) => {
   const user = req.session?.user;
   if (!user?.id) {

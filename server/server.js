@@ -14,7 +14,7 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 if (!process.env.SESSION_SECRET) {
-  throw new Error('SESSION_SECRET is required in environment variables.');
+  throw new Error('SESSION_SECRET is required');
 }
 
 app.use(cors({
