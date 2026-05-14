@@ -7,12 +7,14 @@ export const setSessionUser = (req, user) => {
     name: user.name,
     gmail: user.gmail,
     imageUrl: user.imageUrl || '',
+    // test: 'test', 
   };
 };
 
 // Session shalgah
 export const requireAuth = (req, res, next) => {
   const user = req.session?.user;
+  // console.log('Authenticated user:', user.id);
   if (!user?.id) {
     return authError(res, 403, 'Нэвтэрсэн байх шаардлагатай.', 'AUTH_REQUIRED');
   }
@@ -21,6 +23,7 @@ export const requireAuth = (req, res, next) => {
     name: user.name,
     gmail: user.gmail,
     imageUrl: user.imageUrl || '',
+    // test: user.test || 'test',
   };
   return next();
 };
